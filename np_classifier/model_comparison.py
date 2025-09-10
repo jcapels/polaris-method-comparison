@@ -322,7 +322,7 @@ def mcs_plot(pc, effect_size, means, labels=True, cmap=None, cbar_ax_bbox=None,
 
 def make_mcs_plot_grid(df, stats, group_col, alpha=.05,
                        figsize=(20, 10), direction_dict={}, effect_dict={}, show_diff=True,
-                       cell_text_size=16, axis_text_size=12, title_text_size=16, sort_axes=False):
+                       cell_text_size=16, axis_text_size=12, title_text_size=16, sort_axes=False, rotation_x=45, rotation_y=0):
     """
     Create a grid of multiple comparison of means plots using Tukey HSD test results.
 
@@ -346,6 +346,11 @@ def make_mcs_plot_grid(df, stats, group_col, alpha=.05,
     nrow = math.ceil(len(stats) / 3)
     fig, ax = plt.subplots(nrow, 3, figsize=figsize)
 
+    if nrow == 1:
+        ax = ax.reshape(1, -1)
+
+    print(f"Creating {nrow} rows and 3 columns of plots for {len(stats)} stats.")
+
     # Set defaults
     for key in ['r2', 'rho', 'prec', 'recall', 'mae', 'mse']:
         direction_dict.setdefault(key, 'maximize' if key in ['r2', 'rho', 'prec', 'recall'] else 'minimize')
@@ -359,9 +364,6 @@ def make_mcs_plot_grid(df, stats, group_col, alpha=.05,
     for i, stat in enumerate(stats):
         stat = stat.lower()
 
-        row = i // 3
-        col = i % 3
-
         if stat not in direction_dict:
             raise ValueError(f"Stat '{stat}' is missing in direction_dict. Please set its value.")
         if stat not in effect_dict:
@@ -374,12 +376,15 @@ def make_mcs_plot_grid(df, stats, group_col, alpha=.05,
         _, df_means, df_means_diff, pc = rm_tukey_hsd(df, stat, group_col, alpha,
                                                        sort_axes, direction_dict)
         
-        print(ax.shape)
+        row = i // 3
+        col = i % 3
 
         hax = mcs_plot(pc, effect_size=df_means_diff, means=df_means[stat],
                        show_diff=show_diff, ax=ax[row, col], cbar=True,
                        cell_text_size=cell_text_size, axis_text_size=axis_text_size,
                        reverse_cmap=reverse_cmap, vlim=effect_dict[stat])
+        hax.set_xticklabels(hax.get_xticklabels(), rotation=rotation_x, ha='right', rotation_mode='anchor')
+        hax.set_yticklabels(hax.get_yticklabels(), rotation=rotation_y, ha='center', rotation_mode='anchor')
         hax.set_title(stat.upper(), fontsize=title_text_size)
 
     # If there are less plots than cells in the grid, hide the remaining cells
@@ -464,7 +469,7 @@ def ci_plot(result_tab, ax_in, name):
     ax.set_xlim(-0.2, 0.2) 
 
 
-def make_ci_plot_grid(df_in, metric_list, group_col="method"):
+def make_ci_plot_grid(df_in, metric_list, group_col="method", figsize=(8, 2)):
     """
      Create a grid of confidence interval plots for multiple metrics using Tukey HSD test results.
 
@@ -476,7 +481,7 @@ def make_ci_plot_grid(df_in, metric_list, group_col="method"):
      Returns:
      None
      """
-    figure, axes = plt.subplots(len(metric_list), 1, figsize=(8, 2 * len(metric_list)), sharex=False)
+    figure, axes = plt.subplots(len(metric_list), 1, figsize=figsize, sharex=False)
     if not isinstance(axes, np.ndarray):
         axes = np.array([axes])
     for i, metric in enumerate(metric_list):
